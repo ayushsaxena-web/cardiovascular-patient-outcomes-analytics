@@ -77,7 +77,8 @@ The dashboard enables healthcare administrators to:
 
 ## Dashboard Preview
 
-<img width="1440" height="900" alt="Screenshot 2026-06-01 at 6 16 20 PM" src="https://github.com/user-attachments/assets/8ccc7cf2-f9ba-4d88-b071-41d9d579ccbb" />
+<img width="1429" height="797" alt="Screenshot 2026-06-01 at 6 34 39 PM" src="https://github.com/user-attachments/assets/caae7381-7fe2-4453-894a-3722ff243b9f" />
+
 
 
 ## Repository Contents
