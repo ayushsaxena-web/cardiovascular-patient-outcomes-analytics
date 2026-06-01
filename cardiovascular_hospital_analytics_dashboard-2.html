@@ -1,0 +1,616 @@
+
+<h2 class="sr-only">Cardiovascular Patients Outcome and Hospital Operations Analytics Dashboard — interactive Power BI-style dashboard with KPI cards, admission trends, disease mortality, AQI correlation, and pollution charts.</h2>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body, .dash { font-family: 'DM Sans', sans-serif; }
+
+  .dash { padding: 0 0 2rem; }
+
+  .top-bar {
+    background: #0f2540;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .top-bar-left { display: flex; align-items: center; gap: 12px; }
+  .top-bar-logo {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: #e63946; display: flex; align-items: center; justify-content: center;
+  }
+  .top-bar-title { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
+  .top-bar-sub { font-size: 12px; color: #8da9c4; margin-top: 1px; }
+  .top-bar-right { display: flex; gap: 8px; align-items: center; }
+  .year-btn {
+    background: transparent; border: 1px solid #2a4a6b; color: #8da9c4;
+    padding: 5px 13px; border-radius: 6px; font-size: 12px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+  }
+  .year-btn.active, .year-btn:hover { background: #e63946; border-color: #e63946; color: #fff; }
+
+  .section { padding: 0 20px; margin-bottom: 18px; }
+
+  .section-label {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+    color: var(--color-text-secondary); text-transform: uppercase;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--color-border-tertiary);
+  }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .kpi-card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 14px 16px;
+    position: relative; overflow: hidden;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .kpi-card.red::before { background: #e63946; }
+  .kpi-card.blue::before { background: #1a73e8; }
+  .kpi-card.amber::before { background: #f4a800; }
+  .kpi-card.green::before { background: #1b7a4a; }
+  .kpi-icon { font-size: 18px; margin-bottom: 8px; opacity: 0.7; }
+  .kpi-label { font-size: 11px; color: var(--color-text-secondary); font-weight: 500; letter-spacing: 0.04em; }
+  .kpi-value { font-size: 26px; font-weight: 600; color: var(--color-text-primary); line-height: 1.1; margin: 4px 0 3px; font-family: 'DM Mono', monospace; }
+  .kpi-sub { font-size: 11px; color: var(--color-text-secondary); }
+  .kpi-badge {
+    display: inline-block; font-size: 10px; padding: 2px 7px;
+    border-radius: 20px; font-weight: 500; margin-top: 4px;
+  }
+  .kpi-badge.up { background: #e6f4ec; color: #1b7a4a; }
+  .kpi-badge.down { background: #fce9e9; color: #b91c1c; }
+  .kpi-badge.neutral { background: #f0f4ff; color: #1a73e8; }
+
+  .charts-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 12px; }
+  .chart-card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 16px;
+  }
+  .chart-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+  .chart-subtitle { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 14px; }
+  .chart-wrap { position: relative; width: 100%; }
+
+  .mid-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .bottom-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; }
+
+  .tab-group { display: flex; gap: 4px; margin-bottom: 14px; }
+  .tab {
+    font-size: 11px; padding: 4px 11px; border-radius: 20px; cursor: pointer;
+    border: 1px solid var(--color-border-secondary); color: var(--color-text-secondary);
+    background: transparent; font-family: 'DM Sans', sans-serif; transition: all 0.12s;
+  }
+  .tab.active { background: #0f2540; color: #fff; border-color: #0f2540; }
+
+  .legend-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--color-text-secondary); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  .mortality-table { width: 100%; border-collapse: collapse; }
+  .mortality-table tr { border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .mortality-table tr:last-child { border-bottom: none; }
+  .mortality-table td { padding: 8px 4px; font-size: 12px; }
+  .mortality-table td:last-child { text-align: right; }
+  .disease-name { font-weight: 500; color: var(--color-text-primary); }
+  .disease-rate { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+  .rate-bar-wrap { width: 80px; display: inline-block; vertical-align: middle; margin: 0 8px; }
+  .rate-bar { height: 4px; border-radius: 2px; background: #e63946; }
+
+  .pollutant-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .pollutant-pill {
+    padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 500;
+    background: var(--color-background-secondary); color: var(--color-text-secondary);
+    border: 0.5px solid var(--color-border-tertiary);
+  }
+  .pollutant-pill.dominant { background: #fce9e9; color: #b91c1c; border-color: #f7c1c1; }
+
+  .insight-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .insight-card {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 12px 14px;
+  }
+  .insight-icon { font-size: 20px; margin-bottom: 6px; }
+  .insight-title { font-size: 12px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 3px; }
+  .insight-text { font-size: 11px; color: var(--color-text-secondary); line-height: 1.5; }
+
+  .footer-bar {
+    margin: 18px 20px 0;
+    padding-top: 12px;
+    border-top: 0.5px solid var(--color-border-tertiary);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer-label { font-size: 10px; color: var(--color-text-secondary); }
+</style>
+
+<div class="dash">
+
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="top-bar-logo">
+        <i class="ti ti-heart-rate-monitor" style="color:#fff; font-size:18px;" aria-hidden="true"></i>
+      </div>
+      <div>
+        <div class="top-bar-title">Cardiovascular Patients Outcome & Hospital Operations Analytics</div>
+        <div class="top-bar-sub">HDHI Dataset · Hisar, Haryana · 2017–2019</div>
+      </div>
+    </div>
+    <div class="top-bar-right">
+      <button class="year-btn active" onclick="filterYear('all', this)">All</button>
+      <button class="year-btn" onclick="filterYear(2017, this)">2017</button>
+      <button class="year-btn" onclick="filterYear(2018, this)">2018</button>
+      <button class="year-btn" onclick="filterYear(2019, this)">2019</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><i class="ti ti-layout-grid" aria-hidden="true"></i> Key Performance Indicators</div>
+    <div class="kpi-grid">
+      <div class="kpi-card red">
+        <div class="kpi-icon"><i class="ti ti-users" aria-hidden="true"></i></div>
+        <div class="kpi-label">Total Admissions</div>
+        <div class="kpi-value" id="kpi-admissions">15,757</div>
+        <div class="kpi-sub">765 recorded days</div>
+        <span class="kpi-badge up" id="kpi-adm-trend">+41% YoY (17→18)</span>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-icon"><i class="ti ti-activity" aria-hidden="true"></i></div>
+        <div class="kpi-label">Total In-Hospital Deaths</div>
+        <div class="kpi-value" id="kpi-deaths">359</div>
+        <div class="kpi-sub">266 death-event days</div>
+        <span class="kpi-badge down" id="kpi-death-trend">−93% 2019 vs 2018</span>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-icon"><i class="ti ti-wind" aria-hidden="true"></i></div>
+        <div class="kpi-label">Mean AQI</div>
+        <div class="kpi-value" id="kpi-aqi">127</div>
+        <div class="kpi-sub">Range: 28 – 797</div>
+        <span class="kpi-badge down" id="kpi-aqi-trend">Moderate–Poor avg.</span>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-icon"><i class="ti ti-calendar-stats" aria-hidden="true"></i></div>
+        <div class="kpi-label">Avg Daily Admissions</div>
+        <div class="kpi-value" id="kpi-avg">20.6</div>
+        <div class="kpi-sub">Peak month: Dec 2018</div>
+        <span class="kpi-badge neutral" id="kpi-avg-trend">Max 50/day</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><i class="ti ti-chart-line" aria-hidden="true"></i> Admission & Mortality Trends</div>
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">Monthly Admissions by Year</div>
+        <div class="chart-subtitle">Total hospital admissions aggregated per month</div>
+        <div class="legend-row">
+          <span class="legend-item"><span class="legend-dot" style="background:#e63946"></span>2017</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#1a73e8"></span>2018</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#f4a800"></span>2019</span>
+        </div>
+        <div class="chart-wrap" style="height:220px;">
+          <canvas id="admChart" role="img" aria-label="Monthly admissions line chart for 2017, 2018 and 2019">Monthly admissions per year from 2017 to 2019.</canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Admissions by AQI Category</div>
+        <div class="chart-subtitle">Average daily admissions per air quality band</div>
+        <div class="chart-wrap" style="height:258px;">
+          <canvas id="aqiCatChart" role="img" aria-label="Bar chart showing average daily admissions per AQI category">Average admissions per AQI category.</canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><i class="ti ti-stethoscope" aria-hidden="true"></i> Disease Mortality Risk</div>
+    <div class="mid-row">
+      <div class="chart-card">
+        <div class="chart-title">Mortality Rate by Diagnosis</div>
+        <div class="chart-subtitle">% of admitted patients who died per disease group</div>
+        <div class="chart-wrap" style="height:220px;">
+          <canvas id="mortalityChart" role="img" aria-label="Horizontal bar chart of mortality rate per disease">Disease-wise mortality rates.</canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Disease Risk Ranking</div>
+        <div class="chart-subtitle">Sorted by mortality rate (highest risk first)</div>
+        <table class="mortality-table" style="margin-top:4px;">
+          <tr>
+            <td><span class="disease-name">AKI</span></td>
+            <td><div class="rate-bar-wrap"><div class="rate-bar" style="width:100%"></div></div></td>
+            <td><span class="disease-rate" style="color:#e63946">16.2%</span></td>
+          </tr>
+          <tr>
+            <td><span class="disease-name">CKD</span></td>
+            <td><div class="rate-bar-wrap"><div class="rate-bar" style="width:89%;background:#e97434"></div></div></td>
+            <td><span class="disease-rate" style="color:#e97434">14.4%</span></td>
+          </tr>
+          <tr>
+            <td><span class="disease-name">Heart Failure</span></td>
+            <td><div class="rate-bar-wrap"><div class="rate-bar" style="width:87%;background:#f4a800"></div></div></td>
+            <td><span class="disease-rate" style="color:#e97434">14.1%</span></td>
+          </tr>
+          <tr>
+            <td><span class="disease-name">STEMI</span></td>
+            <td><div class="rate-bar-wrap"><div class="rate-bar" style="width:58%;background:#f4a800"></div></div></td>
+            <td><span class="disease-rate" style="color:#f4a800">9.4%</span></td>
+          </tr>
+          <tr>
+            <td><span class="disease-name">DM</span></td>
+            <td><div class="rate-bar-wrap"><div class="rate-bar" style="width:35%;background:#1b7a4a"></div></div></td>
+            <td><span class="disease-rate" style="color:#1b7a4a">5.7%</span></td>
+          </tr>
+          <tr>
+            <td><span class="disease-name">HTN</span></td>
+            <td><div class="rate-bar-wrap"><div class="rate-bar" style="width:34%;background:#1b7a4a"></div></div></td>
+            <td><span class="disease-rate" style="color:#1b7a4a">5.5%</span></td>
+          </tr>
+          <tr>
+            <td><span class="disease-name">CAD</span></td>
+            <td><div class="rate-bar-wrap"><div class="rate-bar" style="width:28%;background:#1a73e8"></div></div></td>
+            <td><span class="disease-rate" style="color:#1a73e8">4.6%</span></td>
+          </tr>
+        </table>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Annual Admission vs Deaths</div>
+        <div class="chart-subtitle">Year-over-year operational comparison</div>
+        <div class="chart-wrap" style="height:220px;">
+          <canvas id="yearlyChart" role="img" aria-label="Grouped bar chart comparing annual admissions and deaths by year">Annual admissions and deaths by year.</canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><i class="ti ti-cloud" aria-hidden="true"></i> Pollution & Environmental Impact</div>
+    <div class="bottom-row">
+      <div class="chart-card">
+        <div class="chart-title">AQI & PM2.5 vs Admissions Over Time</div>
+        <div class="chart-subtitle">Monthly trend showing pollution and patient load correlation</div>
+        <div class="tab-group">
+          <button class="tab active" onclick="switchPollTab('aqi', this)">AQI</button>
+          <button class="tab" onclick="switchPollTab('pm25', this)">PM2.5</button>
+          <button class="tab" onclick="switchPollTab('pm10', this)">PM10</button>
+        </div>
+        <div class="legend-row">
+          <span class="legend-item"><span class="legend-dot" style="background:#8b5cf6"></span>Pollution Index</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#e63946"></span>Avg Daily Admissions</span>
+        </div>
+        <div class="chart-wrap" style="height:220px;">
+          <canvas id="pollChart" role="img" aria-label="Dual-axis line chart showing pollution and admissions monthly trend">Monthly pollution vs admissions trend.</canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">AQI Category Distribution</div>
+        <div class="chart-subtitle">Days per air quality band (737 total days)</div>
+        <div class="chart-wrap" style="height:200px;">
+          <canvas id="aqiPieChart" role="img" aria-label="Donut chart showing distribution of days per AQI category">AQI category distribution across all days.</canvas>
+        </div>
+        <div style="margin-top: 10px;">
+          <div class="legend-row" style="justify-content:center;">
+            <span class="legend-item"><span class="legend-dot" style="background:#1b7a4a"></span>Good (56)</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#82c91e"></span>Satisfactory (294)</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#f4a800"></span>Moderate (280)</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#e97434"></span>Poor (70)</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#e63946"></span>Very Poor (32)</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#7c1416"></span>Severe (5)</span>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="font-size:11px; color:var(--color-text-secondary); margin-bottom:6px;">Dominant Pollutants</div>
+          <div class="pollutant-pills">
+            <span class="pollutant-pill dominant">PM10 — 374 days</span>
+            <span class="pollutant-pill dominant">PM2.5 — 319 days</span>
+            <span class="pollutant-pill">CO — 31 days</span>
+            <span class="pollutant-pill">NO2 — 11 days</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><i class="ti ti-bulb" aria-hidden="true"></i> Key Insights</div>
+    <div class="insight-row">
+      <div class="insight-card">
+        <div class="insight-icon"><i class="ti ti-trending-up" aria-hidden="true" style="color:#e63946;"></i></div>
+        <div class="insight-title">Winter admission surge</div>
+        <div class="insight-text">Nov–Jan consistently show peak admissions, likely driven by cold weather-induced cardiovascular stress and elevated winter pollution levels.</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon"><i class="ti ti-heart-broken" aria-hidden="true" style="color:#e97434;"></i></div>
+        <div class="insight-title">Renal & cardiac highest risk</div>
+        <div class="insight-text">AKI (16.2%) and CKD (14.4%) carry the highest mortality. STEMI at 9.4% demands rapid intervention protocols to reduce fatality.</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-icon"><i class="ti ti-cloud-fog" aria-hidden="true" style="color:#8b5cf6;"></i></div>
+        <div class="insight-title">PM2.5/PM10 dominate AQI</div>
+        <div class="insight-text">Particulate matter drives 93% of poor-AQI days. Avg PM2.5 of 112 μg/m³ far exceeds WHO safe limits, correlating with elevated cardio admissions.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bar">
+    <div class="footer-label">Data: HDHI Admission, Mortality & Pollution Dataset · Analysis: Python (Pandas, Matplotlib, Seaborn)</div>
+    <div class="footer-label">Project by Ayush Saxena · MBA Healthcare Analytics, IIHMR University</div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const monthlyData = {
+  2017: [187,176,175,529,559,528,527,517,504,533,642,637],
+  2018: [730,655,541,508,581,618,575,638,695,753,707,788],
+  2019: [644,522,525,8,9,7,5,7,8,6,3,3]
+};
+
+const monthlyPoll = {
+  aqi:   [155,145,122,109,112,142,107,102,208,274,221,175, 131,95,86,107,165,137,81,71,79,128,109,120, 97,102,82,123,152,121,126,86,97,108,248,148],
+  pm25:  [147,139,118,103,108,137,100,97,139,255,211,163,  124,74,75,92,160,114,66,50,63,120,85,99,   76,91,76,113,117,110,117,57,54,76,96,88],
+  pm10:  [130,132,113,97,101,122,97,93,149,260,208,153,   110,94,83,100,125,131,72,64,74,100,103,115, 91,84,76,98,139,99,100,86,97,106,248,148],
+  adm:   [20.8,19.6,10.9,19.6,20.0,19.6,18.8,18.5,18.7,19.0,23.8,22.8, 23.5,23.4,17.5,16.9,18.7,20.6,18.5,20.6,23.2,24.3,23.6,25.4, 29.3,27.5,23.9,2.7,3.0,2.3,1.7,2.3,2.7,2.0,1.0,1.0]
+};
+
+const yearlyStats = {
+  admissions: [5514, 7789, 1747],
+  deaths: [147, 198, 14],
+  years: [2017, 2018, 2019]
+};
+
+const aqiCatData = {
+  labels: ['Good','Satisfactory','Moderate','Poor','Very Poor','Severe'],
+  admissions: [20.6, 20.0, 20.3, 23.3, 19.0, 23.6],
+  colors: ['#1b7a4a','#82c91e','#f4a800','#e97434','#e63946','#7c1416']
+};
+
+let admChartObj, pollChartObj, mortalityChartObj, yearlyChartObj, aqiCatChartObj, aqiPieChartObj;
+let currentYear = 'all';
+let currentPollTab = 'aqi';
+
+function getYearLabels(yr) {
+  if (yr === 'all') return MONTHS;
+  return MONTHS;
+}
+
+function getAdmDatasets(yr) {
+  const colors = { 2017: '#e63946', 2018: '#1a73e8', 2019: '#f4a800' };
+  if (yr !== 'all') {
+    return [{
+      label: String(yr),
+      data: monthlyData[yr],
+      borderColor: colors[yr],
+      backgroundColor: colors[yr] + '22',
+      borderWidth: 2, pointRadius: 3, tension: 0.4, fill: true,
+      pointBorderColor: colors[yr]
+    }];
+  }
+  return [2017,2018,2019].map(y => ({
+    label: String(y),
+    data: monthlyData[y],
+    borderColor: colors[y],
+    backgroundColor: colors[y] + '18',
+    borderWidth: 2, pointRadius: 2, tension: 0.4, fill: false
+  }));
+}
+
+function buildAdmChart() {
+  const ctx = document.getElementById('admChart').getContext('2d');
+  admChartObj = new Chart(ctx, {
+    type: 'line',
+    data: { labels: MONTHS, datasets: getAdmDatasets('all') },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { font: { size: 11 }, color: '#888', autoSkip: false, maxRotation: 0 } },
+        y: { grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { font: { size: 11 }, color: '#888' }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+function buildAqiCatChart() {
+  const ctx = document.getElementById('aqiCatChart').getContext('2d');
+  aqiCatChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: aqiCatData.labels,
+      datasets: [{
+        label: 'Avg Daily Admissions',
+        data: aqiCatData.admissions,
+        backgroundColor: aqiCatData.colors,
+        borderRadius: 4, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { font: { size: 11 }, color: '#888' }, min: 17, max: 25 },
+        y: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#888' } }
+      }
+    }
+  });
+}
+
+function buildMortalityChart() {
+  const ctx = document.getElementById('mortalityChart').getContext('2d');
+  mortalityChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['AKI','CKD','Heart Failure','STEMI','DM','HTN','CAD'],
+      datasets: [{
+        label: 'Mortality Rate %',
+        data: [16.21, 14.39, 14.08, 9.45, 5.75, 5.49, 4.58],
+        backgroundColor: ['#e63946','#e63946','#e97434','#f4a800','#1b7a4a','#1b7a4a','#1a73e8'],
+        borderRadius: 3, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.toFixed(1) + '%' } } },
+      scales: {
+        x: { grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { font: { size: 11 }, color: '#888', callback: v => v + '%' } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#888' } }
+      }
+    }
+  });
+}
+
+function buildYearlyChart() {
+  const ctx = document.getElementById('yearlyChart').getContext('2d');
+  yearlyChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['2017','2018','2019'],
+      datasets: [
+        { label: 'Admissions', data: [5514,7789,1747], backgroundColor: '#1a73e8', borderRadius: 3 },
+        { label: 'Deaths ×10', data: [1470,1980,140], backgroundColor: '#e63946', borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: c => c.datasetIndex === 1 ? 'Deaths: ' + Math.round(c.raw / 10) : 'Admissions: ' + c.raw
+      }}},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#888' } },
+        y: { grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { font: { size: 11 }, color: '#888' } }
+      }
+    }
+  });
+}
+
+function getPollLabels() {
+  const labels = [];
+  const yrs = [2017, 2018, 2019];
+  yrs.forEach(y => MONTHS.forEach(m => labels.push(m[0] + "'" + String(y).slice(2))));
+  return labels;
+}
+
+function buildPollChart(tab) {
+  const ctx = document.getElementById('pollChart').getContext('2d');
+  if (pollChartObj) pollChartObj.destroy();
+  const labels = getPollLabels();
+  pollChartObj = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: tab === 'aqi' ? 'AQI' : tab === 'pm25' ? 'PM2.5 (µg/m³)' : 'PM10 (µg/m³)',
+          data: monthlyPoll[tab],
+          borderColor: '#8b5cf6', backgroundColor: '#8b5cf622',
+          borderWidth: 2, pointRadius: 0, tension: 0.4, yAxisID: 'y1', fill: true
+        },
+        {
+          label: 'Avg Daily Admissions',
+          data: monthlyPoll.adm,
+          borderColor: '#e63946', backgroundColor: 'transparent',
+          borderWidth: 2, pointRadius: 0, tension: 0.4, yAxisID: 'y2',
+          borderDash: [5, 3]
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { grid: { color: 'rgba(128,128,128,0.08)' }, ticks: { font: { size: 10 }, color: '#888', maxTicksLimit: 12 } },
+        y1: { position: 'left', grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { font: { size: 10 }, color: '#8b5cf6' } },
+        y2: { position: 'right', grid: { display: false }, ticks: { font: { size: 10 }, color: '#e63946' } }
+      }
+    }
+  });
+}
+
+function buildAqiPieChart() {
+  const ctx = document.getElementById('aqiPieChart').getContext('2d');
+  aqiPieChartObj = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Good','Satisfactory','Moderate','Poor','Very Poor','Severe'],
+      datasets: [{
+        data: [56,294,280,70,32,5],
+        backgroundColor: ['#1b7a4a','#82c91e','#f4a800','#e97434','#e63946','#7c1416'],
+        borderWidth: 2, borderColor: 'var(--color-background-primary)', hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '60%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => c.label + ': ' + c.raw + ' days (' + Math.round(c.raw/737*100) + '%)' } }
+      }
+    }
+  });
+}
+
+function filterYear(yr, btn) {
+  currentYear = yr;
+  document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  if (yr === 'all') {
+    document.getElementById('kpi-admissions').textContent = '15,757';
+    document.getElementById('kpi-deaths').textContent = '359';
+    document.getElementById('kpi-aqi').textContent = '127';
+    document.getElementById('kpi-avg').textContent = '20.6';
+    document.getElementById('kpi-adm-trend').textContent = '+41% YoY (17→18)';
+    document.getElementById('kpi-adm-trend').className = 'kpi-badge up';
+    document.getElementById('kpi-death-trend').textContent = '−93% 2019 vs 2018';
+    document.getElementById('kpi-aqi-trend').textContent = 'Moderate–Poor avg.';
+    document.getElementById('kpi-avg-trend').textContent = 'Max 50/day';
+  } else {
+    const adm = yearlyStats.admissions[yr - 2017];
+    const dths = yearlyStats.deaths[yr - 2017];
+    const aqiVals = { 2017: 158, 2018: 109, 2019: 105 };
+    const avgVals = { 2017: 18.1, 2018: 21.3, 2019: 14.6 };
+    document.getElementById('kpi-admissions').textContent = adm.toLocaleString();
+    document.getElementById('kpi-deaths').textContent = dths;
+    document.getElementById('kpi-aqi').textContent = aqiVals[yr];
+    document.getElementById('kpi-avg').textContent = avgVals[yr];
+    document.getElementById('kpi-adm-trend').textContent = yr + ' data';
+    document.getElementById('kpi-adm-trend').className = 'kpi-badge neutral';
+    document.getElementById('kpi-death-trend').textContent = dths + ' total deaths';
+    document.getElementById('kpi-aqi-trend').textContent = 'Mean AQI ' + aqiVals[yr];
+    document.getElementById('kpi-avg-trend').textContent = 'Avg ' + avgVals[yr] + '/day';
+  }
+
+  if (admChartObj) {
+    admChartObj.data.datasets = getAdmDatasets(yr);
+    admChartObj.update();
+  }
+}
+
+function switchPollTab(tab, btn) {
+  currentPollTab = tab;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildPollChart(tab);
+}
+
+window.addEventListener('load', () => {
+  buildAdmChart();
+  buildAqiCatChart();
+  buildMortalityChart();
+  buildYearlyChart();
+  buildPollChart('aqi');
+  buildAqiPieChart();
+});
+</script>
